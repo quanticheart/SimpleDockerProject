@@ -1,0 +1,53 @@
+version: "3.9"
+services:
+  database:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+    volumes:
+      - ./database/db/data:/var/lib/mysql
+      - ./database/script.sql:/docker-entrypoint-initdb.d/script.sql:ro
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost" ]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: always
+
+  #  adminer:
+  #    image: adminer
+  #    restart: always
+  #    ports:
+  #      - "8080:8080"
+
+  api:
+    build:
+      context: api
+      dockerfile: Dockerfile
+    container_name: node-container
+    volumes:
+      - ./api:/home/node/app
+    ports:
+      - "9001:9001"
+    depends_on:
+      - database
+    restart: always
+    links:
+      - database
+
+  web:
+    image: "php:7.2-apache"
+    container_name: php-container
+    volumes:
+      - ./ui:/var/www/html
+    ports:
+      - "8888:80"
+    depends_on:
+      - database
+      - api
+    restart: always
+    links:
+      - api
